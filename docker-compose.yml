@@ -1,0 +1,20 @@
+services:
+  frigate-ai-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: frigate-ai-proxy
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - FRIGATE_PROXY_LOG_LEVEL=INFO
+      - FRIGATE_PROXY_MAX_OUTPUT_TOKENS=600
+      - FRIGATE_PROXY_MAX_SAMPLED_IMAGES=20
+      - FRIGATE_PROXY_ELORIAN_BASE_URL=https://api.elorian.ai/v1
+      - FRIGATE_PROXY_ELORIAN_MODEL=glimpse
+      - FRIGATE_PROXY_ELORIAN_API_KEY=${ELORIAN_API_KEY}
+      - FRIGATE_PROXY_ENABLE_TYPESAFE_THREAT_SCORING=true
+      - FRIGATE_PROXY_TYPESAFE_BASE_URL=https://api.typesafe.ai/v1
+      - FRIGATE_PROXY_TYPESAFE_MODEL=jev-latest
+      - FRIGATE_PROXY_TYPESAFE_API_KEY=${TYPESAFE_API_KEY}
