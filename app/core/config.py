@@ -1,7 +1,7 @@
 import logging
 from typing import Literal
 
-from pydantic import Field, HttpUrl, computed_field
+from pydantic import AliasChoices, Field, HttpUrl, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.logging import setup_logging
@@ -9,30 +9,72 @@ from app.core.logging import setup_logging
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="FRIGATE_PROXY_",
         secrets_dir="/run/secrets",
         extra="ignore",
     )
 
-    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
+        default="INFO",
+        validation_alias=AliasChoices("FRIGATE_PROXY_LOG_LEVEL", "HELPERS_LOG_LEVEL", "LOG_LEVEL"),
+    )
 
     # Token and frame bounds for cost control
-    MAX_OUTPUT_TOKENS: int = 600
-    MAX_SAMPLED_IMAGES: int = 20
+    MAX_OUTPUT_TOKENS: int = Field(
+        default=600,
+        validation_alias=AliasChoices(
+            "FRIGATE_PROXY_MAX_OUTPUT_TOKENS", "HELPERS_STD_MAX_OUTPUT_TOKENS"
+        ),
+    )
+    MAX_SAMPLED_IMAGES: int = Field(
+        default=20,
+        validation_alias=AliasChoices("FRIGATE_PROXY_MAX_SAMPLED_IMAGES", "MAX_SAMPLED_IMAGES"),
+    )
 
     # Vision-Language Model provider (Elorian Glimpse or compatible)
-    ELORIAN_BASE_URL: HttpUrl = HttpUrl("https://api.elorian.ai/v1")
-    ELORIAN_API_KEY: str = Field(default="", min_length=0)
-    ELORIAN_MODEL: str = "glimpse"
+    ELORIAN_BASE_URL: HttpUrl = Field(
+        default=HttpUrl("https://api.elorian.ai/v1"),
+        validation_alias=AliasChoices("FRIGATE_PROXY_ELORIAN_BASE_URL", "HELPERS_ELORIAN_BASE_URL"),
+    )
+    ELORIAN_API_KEY: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "FRIGATE_PROXY_ELORIAN_API_KEY", "HELPERS_ELORIAN_API_KEY", "ELORIAN_API_KEY"
+        ),
+    )
+    ELORIAN_MODEL: str = Field(
+        default="glimpse",
+        validation_alias=AliasChoices("FRIGATE_PROXY_ELORIAN_MODEL", "HELPERS_ELORIAN_MODEL"),
+    )
 
     # Threat Intelligence & Assessment (TypeSafe System 1 / Jev)
-    ENABLE_TYPESAFE_THREAT_SCORING: bool = True
-    TYPESAFE_BASE_URL: HttpUrl = HttpUrl("https://api.typesafe.ai/v1")
-    TYPESAFE_API_KEY: str = Field(default="", min_length=0)
-    TYPESAFE_MODEL: str = "jev-latest"
+    ENABLE_TYPESAFE_THREAT_SCORING: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "FRIGATE_PROXY_ENABLE_TYPESAFE_THREAT_SCORING", "ENABLE_TYPESAFE_THREAT_SCORING"
+        ),
+    )
+    TYPESAFE_BASE_URL: HttpUrl = Field(
+        default=HttpUrl("https://api.typesafe.ai/v1"),
+        validation_alias=AliasChoices(
+            "FRIGATE_PROXY_TYPESAFE_BASE_URL", "HELPERS_TYPESAFE_BASE_URL"
+        ),
+    )
+    TYPESAFE_API_KEY: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "FRIGATE_PROXY_TYPESAFE_API_KEY", "HELPERS_TYPESAFE_API_KEY", "TYPESAFE_API_KEY"
+        ),
+    )
+    TYPESAFE_MODEL: str = Field(
+        default="jev-latest",
+        validation_alias=AliasChoices("FRIGATE_PROXY_TYPESAFE_MODEL", "HELPERS_TYPESAFE_MODEL"),
+    )
 
     # Optional prefix or guidance to prepend to inbound prompt
-    SYSTEM_PROMPT_PREFIX: str = ""
+    SYSTEM_PROMPT_PREFIX: str = Field(
+        default="",
+        validation_alias=AliasChoices("FRIGATE_PROXY_SYSTEM_PROMPT_PREFIX", "SYSTEM_PROMPT_PREFIX"),
+    )
 
     @computed_field
     @property
