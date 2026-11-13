@@ -17,7 +17,6 @@ console.log("       Frigate AI Proxy - npx Automated Installer         ");
 console.log("==========================================================");
 console.log(NC);
 
-// 1. Verify Docker installation
 try {
   execSync("docker --version", { stdio: "ignore" });
 } catch {
@@ -34,7 +33,6 @@ try {
   process.exit(1);
 }
 
-// 2. 3-Second Auto-Countdown
 console.log(`${YELLOW}Default setup: Glimpse (Elorian) + JEV (TypeSafe)${NC}`);
 console.log(`Press ${BOLD}ANY KEY within 3 seconds${NC} to configure custom OpenAI-compatible endpoints.`);
 console.log("Otherwise, continuing with Glimpse + JEV defaults in...\n");
@@ -191,13 +189,12 @@ const containerName = "frigate-ai-proxy";
 const imageName = "ghcr.io/israelsaba/frigate-ai-proxy:latest";
 
 try {
-  const existing = execSync(`docker ps -a --format '{{.Names}}'`, { encoding: "utf8" });
-  if (existing.split("\n").includes(containerName)) {
+  const existing = spawnSync("docker", ["ps", "-a", "--format", "{{.Names}}"], { encoding: "utf8" });
+  if (existing.stdout && existing.stdout.split("\n").includes(containerName)) {
     console.log(`${YELLOW}Stopping and removing existing ${containerName} container...${NC}`);
-    execSync(`docker rm -f ${containerName}`, { stdio: "ignore" });
+    spawnSync("docker", ["rm", "-f", containerName], { stdio: "ignore" });
   }
 } catch {
-  // ignore
 }
 
 console.log(`Starting ${containerName} on port 8000...`);
@@ -251,7 +248,6 @@ for (let i = 0; i < 15; i++) {
       break;
     }
   } catch {
-    // waiting
   }
   await new Promise((r) => setTimeout(r, 1000));
 }

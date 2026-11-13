@@ -21,7 +21,8 @@ router = APIRouter(prefix="/v1", tags=["ai"])
 
 def get_http_client(request: Request) -> AsyncClient:
     client = request.app.state.client
-    assert isinstance(client, AsyncClient)
+    if not isinstance(client, AsyncClient):
+        raise TypeError("HTTP client is not initialized in application state.")
     return client
 
 
