@@ -77,7 +77,22 @@ It bridges the gap between raw video frames collected by Frigate and high-accura
 
 ## Quick Start
 
-### 1. Docker Compose (Recommended)
+### 1. One-Command Automated Install (Recommended)
+
+Run the interactive one-liner to configure and launch the container in seconds:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/israelsaba/frigate-ai-proxy/main/install.sh | bash
+```
+
+**What it does:**
+- **3-Second Auto-Countdown:** Waits 3 seconds before proceeding with the default **Glimpse (Elorian) + JEV (TypeSafe)** stack. Pressing any key opens custom OpenAI-compatible endpoint configuration.
+- **Key Discovery:** Guides you with one-liners to retrieve your **Elorian API Key** ([`platform.elorian.ai`](https://platform.elorian.ai)) and **JEV API Key** ([`console.typesafe.ai/keys`](https://console.typesafe.ai/keys)).
+- **Container Deployment:** Deploys `ghcr.io/israelsaba/frigate-ai-proxy:latest` with restart policies, checks `/health`, and prints your ready-to-use Frigate `config.yml` snippet.
+
+---
+
+### 2. Docker Compose
 
 Add `frigate-ai-proxy` to your existing Frigate stack:
 
@@ -110,8 +125,14 @@ services:
       - frigate-ai-proxy
 ```
 
-### 2. Local Development
+### 3. Local Development or `uvx` / `pipx`
 
+Run directly via `uvx` without Docker:
+```bash
+uvx frigate-ai-proxy
+```
+
+Or from source:
 ```bash
 git clone https://github.com/israelsaba/frigate-ai-proxy.git
 cd frigate-ai-proxy

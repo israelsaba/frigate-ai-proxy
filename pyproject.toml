@@ -29,6 +29,9 @@ dependencies = [
     "loguru>=0.7.3",
 ]
 
+[project.scripts]
+frigate-ai-proxy = "app.main:cli"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.0",
