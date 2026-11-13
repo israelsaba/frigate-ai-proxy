@@ -12,7 +12,7 @@ from app.core.config import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async with httpx.AsyncClient(timeout=60.0) as client:
-        logger.info(
+        logger.debug(
             "Starting Frigate AI Proxy",
             log_level=settings.LOG_LEVEL,
             max_sampled_images=settings.MAX_SAMPLED_IMAGES,

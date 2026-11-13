@@ -74,18 +74,12 @@ def test_jev_evaluation_response_parsing():
     assert response.confidence == 0.98
 
 
-def test_review_metadata_hybrid_adapter_distinct_fields():
+def test_review_metadata_distinct_fields():
     narrative = (
         "**Scene overview:** Front porch monitored by camera.\n"
         "**Activity observed:** A postal worker delivered an envelope to the mail slot and left immediately."
     )
-    metadata = ReviewMetadata.hybrid_adapter(
-        observations=narrative,
-        threat_level=0,
-        confidence=0.99,
-    )
-    assert metadata.potential_threat_level == 0
-    assert metadata.confidence == 0.99
+    metadata = ReviewMetadata.from_llm_output(narrative)
     assert metadata.title != metadata.scene
     assert metadata.shortSummary != metadata.scene
     assert metadata.title != metadata.shortSummary

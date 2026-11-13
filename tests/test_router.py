@@ -90,4 +90,66 @@ async def test_chat_completions_pipeline():
             assert "shortSummary" in review_json
             assert review_json["title"] != review_json["scene"]
             assert review_json["shortSummary"] != review_json["scene"]
-            assert review_json["potential_threat_level"] == 0
+
+
+@pytest.mark.asyncio
+async def test_chat_completions_with_threat_scoring_via_frigate_model():
+    vlm_mock = {
+        "id": "chatcmpl-test",
+        "object": "chat.completion",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "Person breaking window using crowbar",
+                },
+                "finish_reason": "stop",
+            }
+        ],
+    }
+    jev_mock = {
+        "answers": {
+            "threat_level": {
+                "choice": "2",
+                "confidence": 0.99,
+            }
+        }
+    }
+
+    mock_http_client = AsyncMock(spec=AsyncClient)
+    mock_http_client.post.side_effect = [
+        Response(
+            status_code=200,
+            content=json.dumps(vlm_mock).encode(),
+            request=httpx.Request("POST", "https://api.elorian.ai/v1/chat/completions"),
+        ),
+        Response(
+            status_code=200,
+            content=json.dumps(jev_mock).encode(),
+            request=httpx.Request("POST", "https://api.typesafe.ai/v1/systemone"),
+        ),
+    ]
+
+    app.state.client = mock_http_client
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        payload = {
+            "model": "glimpse-threat",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Analyze event"},
+                    ],
+                }
+            ],
+        }
+
+        with patch("app.api.ai.router.settings.ENABLE_TYPESAFE_THREAT_SCORING", False):
+            res = await client.post("/v1/chat/completions", json=payload)
+            assert res.status_code == 200
+            data = res.json()
+            review_json = json.loads(data["choices"][0]["message"]["content"])
+            assert review_json["potential_threat_level"] == 2
+            assert review_json["confidence"] == 0.99

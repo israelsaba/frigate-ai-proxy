@@ -1,9 +1,8 @@
-import json
-import re
 from enum import StrEnum
 from typing import Annotated, Literal, Self
 from uuid import uuid4
 
+import pydantic_core
 from loguru import logger
 from pydantic import (
     BaseModel,
@@ -51,108 +50,52 @@ class ReasoningChoice(StrEnum):
     MAX = "max"
 
 
-def clean_markdown_artifacts(text: str) -> str:
-    """Strip markdown headers, bold tags, and list markers for plain text display."""
-    cleaned = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
-    cleaned = re.sub(r"__([^_]+)__", r"\1", cleaned)
-    cleaned = re.sub(r"#+\s*", "", cleaned)
-    cleaned = re.sub(r"^[ \t]*[-*]\s*", "", cleaned, flags=re.MULTILINE)
-    cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    return cleaned
+class ReviewMetadata(BaseModel):
+    title: str = Field(min_length=1)
+    scene: str = Field(min_length=1)
+    shortSummary: str = Field(min_length=1)
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    potential_threat_level: int = Field(default=0, ge=0, le=2)
 
+    @classmethod
+    def from_llm_output(cls, content: str) -> Self:
+        clean = content.strip()
+        if clean.startswith("```"):
+            clean = clean.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
-def extract_sentences(text: str, max_sentences: int = 2) -> str:
-    """Extract first n full sentences up to sentence terminators (. ! ?)."""
-    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
-    selected = [s.strip() for s in sentences if s.strip()][:max_sentences]
-    return " ".join(selected)
+        start = clean.find("{")
+        end = clean.rfind("}")
+        json_slice = clean[start : end + 1] if start != -1 and end != -1 else clean
 
-
-def extract_review_narrative(content: str) -> tuple[str, str, str]:
-    """
-    Extract (title, scene, short_summary) from model response.
-    Supports either pre-structured JSON or freeform vision narrative.
-    Guarantees title, scene, and shortSummary are distinct.
-    """
-    clean_content = content.strip()
-
-    try:
-        json_candidate = clean_content
-        if "```json" in json_candidate:
-            json_candidate = json_candidate.split("```json", 1)[1].split("```", 1)[0].strip()
-        elif "```" in json_candidate:
-            json_candidate = json_candidate.split("```", 1)[1].split("```", 1)[0].strip()
-
-        start = json_candidate.find("{")
-        end = json_candidate.rfind("}")
-        if start != -1 and end != -1:
-            data = json.loads(json_candidate[start : end + 1])
+        try:
+            data = pydantic_core.from_json(json_slice, allow_partial="trailing-strings")
             if isinstance(data, dict):
                 title = str(data.get("title", "")).strip()
                 scene = str(data.get("scene", "")).strip()
                 summary = str(data.get("shortSummary", data.get("summary", ""))).strip()
+                conf = float(data.get("confidence", 1.0))
+                threat = int(data.get("potential_threat_level", data.get("threat_level", 0)))
                 if title and scene:
-                    return (
-                        title[:80],
-                        scene,
-                        (summary if summary else extract_sentences(scene, 2))[:280],
+                    return cls(
+                        title=title[:70],
+                        scene=scene,
+                        shortSummary=(summary if summary else scene.split(".")[0].strip())[:280],
+                        confidence=conf,
+                        potential_threat_level=threat,
                     )
-    except (json.JSONDecodeError, TypeError, KeyError, ValueError) as e:
-        logger.debug(
-            "Content not parsed as direct JSON, proceeding with narrative extraction", error=str(e)
+        except (ValueError, TypeError, KeyError):
+            pass
+
+        paragraphs = [p.replace("**", "").strip() for p in clean.split("\n\n") if p.strip()]
+        first_para = paragraphs[0] if paragraphs else clean
+        first_sentence = first_para.split(".")[0].strip()
+        return cls(
+            title=first_sentence[:70] if first_sentence else "Detected Activity",
+            scene=clean,
+            shortSummary=first_para[:280],
+            confidence=1.0,
+            potential_threat_level=0,
         )
-
-    scene = clean_content
-
-    activity_match = re.search(
-        r"(?:\*\*|##)?\s*(?:Activity observed|Activities|Activity assessment|Persons and activity|Subjects and activities|Activity description)\s*(?:\*\*|##)?:?\s*(.*?)(?=\n\s*(?:\*\*|##)|$)",
-        clean_content,
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-    activity_text = activity_match.group(1).strip() if activity_match else ""
-
-    overview_match = re.search(
-        r"(?:\*\*|##)?\s*(?:Scene overview|Scene description|Scene and camera view)\s*(?:\*\*|##)?:?\s*(.*?)(?=\n\s*(?:\*\*|##)|$)",
-        clean_content,
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-    overview_text = overview_match.group(1).strip() if overview_match else ""
-
-    summary_source = (
-        activity_text if activity_text else (overview_text if overview_text else clean_content)
-    )
-    cleaned_summary_source = clean_markdown_artifacts(summary_source)
-
-    cleaned_summary_source = re.sub(
-        r"^(The footage shows|The camera shows|Overhead view of|The video displays|In this clip|Throughout the clip)\s*,?\s*",
-        "",
-        cleaned_summary_source,
-        flags=re.IGNORECASE,
-    )
-    if cleaned_summary_source:
-        cleaned_summary_source = cleaned_summary_source[0].upper() + cleaned_summary_source[1:]
-
-    short_summary = extract_sentences(cleaned_summary_source, max_sentences=2)
-    if not short_summary or len(short_summary) < 10:
-        short_summary = clean_markdown_artifacts(clean_content)[:250]
-    short_summary = short_summary[:280].strip()
-
-    first_clause = re.split(r"[,;—–.-]", short_summary)[0].strip()
-    if 10 <= len(first_clause) <= 70:
-        title = first_clause
-    else:
-        words = short_summary.split()
-        title = " ".join(words[:7])
-        if len(title) > 65:
-            title = title[:65].rsplit(" ", 1)[0]
-
-    title = clean_markdown_artifacts(title).strip(".,;: ")
-    if title:
-        title = title[0].upper() + title[1:]
-    else:
-        title = "Detected Activity"
-
-    return title, scene, short_summary
 
 
 class ChatCompletionRequest(BaseModel, extra="ignore"):
@@ -163,7 +106,6 @@ class ChatCompletionRequest(BaseModel, extra="ignore"):
 
     @property
     def inbound_prompt_text(self) -> str:
-        """Extract the text prompt passed in by Frigate."""
         first_msg = self.messages[0]
         if isinstance(first_msg.content, str):
             return first_msg.content
@@ -174,10 +116,6 @@ class ChatCompletionRequest(BaseModel, extra="ignore"):
 
     @classmethod
     def apply_frigate_prompt(cls, request: Self) -> Self:
-        """
-        Preserve the prompt configured directly in Frigate.
-        Optionally prepend a system prompt prefix if defined in settings.
-        """
         out = request.model_copy(deep=True)
         first_msg = out.messages[0]
 
@@ -196,7 +134,6 @@ class ChatCompletionRequest(BaseModel, extra="ignore"):
 
     @classmethod
     def sample_images(cls, request: Self, max_images: int = settings.MAX_SAMPLED_IMAGES) -> Self:
-        """Subsample image frames to control inference latency and token consumption."""
         out = request.model_copy(deep=True)
         first_msg = out.messages[0]
 
@@ -222,30 +159,6 @@ class ChatCompletionRequest(BaseModel, extra="ignore"):
 
         first_msg.content = text_items + sampled_images
         return out
-
-
-class ReviewMetadata(BaseModel):
-    title: str = Field(min_length=1)
-    scene: str = Field(min_length=1)
-    shortSummary: str = Field(min_length=1)
-    confidence: float = Field(ge=0.0, le=1.0)
-    potential_threat_level: int = Field(ge=0, le=2)
-
-    @classmethod
-    def hybrid_adapter(
-        cls,
-        observations: str,
-        threat_level: int,
-        confidence: float,
-    ) -> Self:
-        title, scene, short_summary = extract_review_narrative(observations)
-        return cls(
-            title=title,
-            scene=scene,
-            shortSummary=short_summary,
-            confidence=confidence,
-            potential_threat_level=threat_level,
-        )
 
 
 class PipelineState(BaseModel):

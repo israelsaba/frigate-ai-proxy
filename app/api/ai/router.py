@@ -1,6 +1,5 @@
 from typing import Annotated
 
-import httpx
 from fastapi import APIRouter, Depends, Request
 from httpx import AsyncClient
 from loguru import logger
@@ -28,11 +27,12 @@ def get_http_client(request: Request) -> AsyncClient:
 
 @router.get("/models", response_model=ModelListResponse)
 async def list_models() -> ModelListResponse:
-    """OpenAI-compatible models list endpoint for Frigate provider initialization."""
     return ModelListResponse(
         data=[
             ModelItem(id=settings.ELORIAN_MODEL),
+            ModelItem(id=f"{settings.ELORIAN_MODEL}-threat"),
             ModelItem(id="glimpse"),
+            ModelItem(id="glimpse-threat"),
         ]
     )
 
@@ -45,7 +45,7 @@ async def chat_completions(
     prepared_request = ChatCompletionRequest.apply_frigate_prompt(request)
     sampled_request = ChatCompletionRequest.sample_images(prepared_request)
 
-    logger.info(
+    logger.debug(
         "Forwarding request to vision-language model",
         model=settings.ELORIAN_MODEL,
         prompt_len=len(sampled_request.inbound_prompt_text),
@@ -56,47 +56,29 @@ async def chat_completions(
         url=settings.elorian_chat_url,
         payload=sampled_request,
         response_model=ChatCompletionResponse,
-        bearer=settings.ELORIAN_API_KEY if settings.ELORIAN_API_KEY else None,
+        bearer=settings.ELORIAN_API_KEY,
     )
 
-    observation_content = vlm_res.content
+    metadata = ReviewMetadata.from_llm_output(vlm_res.content)
+
+    enable_threat_scoring = (
+        "threat" in request.model.lower()
+        or "jev" in request.model.lower()
+        or settings.ENABLE_TYPESAFE_THREAT_SCORING
+    )
+
+    if enable_threat_scoring:
+        jev_res = await base_post_request(
+            client=client,
+            url=settings.typesafe_systemone_url,
+            payload=JevRequest.threat_level_adapter(metadata.scene),
+            response_model=JevEvaluationResponse,
+            bearer=settings.TYPESAFE_API_KEY,
+        )
+        metadata.potential_threat_level = jev_res.threat_level
+        metadata.confidence = jev_res.confidence
+
     logger.debug(
-        "VLM observation received",
-        observation_preview=observation_content[:200] if observation_content else "",
-    )
-
-    threat_level = 0
-    confidence = 0.9
-
-    if settings.ENABLE_TYPESAFE_THREAT_SCORING and settings.TYPESAFE_API_KEY:
-        try:
-            jev_res = await base_post_request(
-                client=client,
-                url=settings.typesafe_systemone_url,
-                payload=JevRequest.threat_level_adapter(observation_content),
-                response_model=JevEvaluationResponse,
-                bearer=settings.TYPESAFE_API_KEY,
-            )
-            threat_level = jev_res.threat_level
-            confidence = jev_res.confidence
-            logger.debug(
-                "Threat scoring response received",
-                threat_level=threat_level,
-                confidence=confidence,
-            )
-        except (httpx.HTTPError, ValueError) as e:
-            logger.warning(
-                "Threat assessment service call failed, defaulting to benign",
-                error=str(e),
-            )
-
-    metadata = ReviewMetadata.hybrid_adapter(
-        observations=observation_content,
-        threat_level=threat_level,
-        confidence=confidence,
-    )
-
-    logger.info(
         "Generated review metadata for Frigate",
         title=metadata.title,
         short_summary=metadata.shortSummary,
