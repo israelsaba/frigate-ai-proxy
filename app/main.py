@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Starting Frigate AI Proxy",
             log_level=settings.LOG_LEVEL,
             max_sampled_images=settings.MAX_SAMPLED_IMAGES,
-            vlm_model=settings.ELORIAN_MODEL,
+            vlm_model=settings.UPSTREAM_VLM_MODEL,
         )
         app.state.client = client
         yield

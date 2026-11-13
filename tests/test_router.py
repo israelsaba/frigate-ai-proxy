@@ -79,7 +79,7 @@ async def test_chat_completions_pipeline():
             ],
         }
 
-        with patch("app.api.ai.router.settings.ENABLE_TYPESAFE_THREAT_SCORING", False):
+        with patch("app.api.ai.router.settings.UPSTREAM_THREAT_ENABLED", False):
             res = await client.post("/v1/chat/completions", json=payload)
             assert res.status_code == 200
             data = res.json()
@@ -146,10 +146,82 @@ async def test_chat_completions_with_threat_scoring_via_frigate_model():
             ],
         }
 
-        with patch("app.api.ai.router.settings.ENABLE_TYPESAFE_THREAT_SCORING", False):
+        with patch("app.api.ai.router.settings.UPSTREAM_THREAT_ENABLED", False):
             res = await client.post("/v1/chat/completions", json=payload)
             assert res.status_code == 200
             data = res.json()
             review_json = json.loads(data["choices"][0]["message"]["content"])
             assert review_json["potential_threat_level"] == 2
             assert review_json["confidence"] == 0.99
+
+
+@pytest.mark.asyncio
+async def test_models_endpoint_with_custom_model():
+    with patch("app.api.ai.router.settings.UPSTREAM_VLM_MODEL", "gpt-4o-mini"):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/v1/models")
+            assert response.status_code == 200
+            model_ids = [m["id"] for m in response.json()["data"]]
+            assert "gpt-4o-mini" in model_ids
+            assert "gpt-4o-mini-threat" in model_ids
+            assert "glimpse" in model_ids
+            assert "glimpse-threat" in model_ids
+
+
+@pytest.mark.asyncio
+async def test_chat_completions_strips_threat_suffix_for_upstream():
+    vlm_mock = {
+        "id": "chatcmpl-test",
+        "object": "chat.completion",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "A courier placed a parcel at the door.",
+                },
+                "finish_reason": "stop",
+            }
+        ],
+    }
+    jev_mock = {
+        "answers": {
+            "threat_level": {
+                "choice": "0",
+                "confidence": 0.95,
+            }
+        }
+    }
+
+    mock_http_client = AsyncMock(spec=AsyncClient)
+    mock_http_client.post.side_effect = [
+        Response(
+            status_code=200,
+            content=json.dumps(vlm_mock).encode(),
+            request=httpx.Request("POST", "https://api.elorian.ai/v1/chat/completions"),
+        ),
+        Response(
+            status_code=200,
+            content=json.dumps(jev_mock).encode(),
+            request=httpx.Request("POST", "https://api.typesafe.ai/v1/systemone"),
+        ),
+    ]
+
+    app.state.client = mock_http_client
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        payload = {
+            "model": "gpt-4o-threat",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": "Analyze event"}],
+                }
+            ],
+        }
+
+        with patch("app.api.ai.router.settings.UPSTREAM_THREAT_ENABLED", False):
+            res = await client.post("/v1/chat/completions", json=payload)
+            assert res.status_code == 200
+            first_call_payload = mock_http_client.post.call_args_list[0].kwargs["json"]
+            assert first_call_payload["model"] == "gpt-4o"
