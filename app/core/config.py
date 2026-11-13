@@ -1,7 +1,7 @@
 import logging
 from typing import Literal
 
-from pydantic import AliasChoices, Field, HttpUrl, computed_field
+from pydantic import HttpUrl, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.logging import setup_logging
@@ -13,102 +13,20 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
-        default="INFO",
-        validation_alias=AliasChoices("FRIGATE_PROXY_LOG_LEVEL", "HELPERS_LOG_LEVEL", "LOG_LEVEL"),
-    )
+    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    MAX_OUTPUT_TOKENS: int = 600
+    MAX_SAMPLED_IMAGES: int = 20
 
-    MAX_OUTPUT_TOKENS: int = Field(
-        default=600,
-        validation_alias=AliasChoices(
-            "FRIGATE_PROXY_MAX_OUTPUT_TOKENS", "HELPERS_STD_MAX_OUTPUT_TOKENS"
-        ),
-    )
-    MAX_SAMPLED_IMAGES: int = Field(
-        default=20,
-        validation_alias=AliasChoices("FRIGATE_PROXY_MAX_SAMPLED_IMAGES", "MAX_SAMPLED_IMAGES"),
-    )
+    UPSTREAM_VLM_BASE_URL: HttpUrl = HttpUrl("https://api.elorian.ai/v1")
+    UPSTREAM_VLM_API_KEY: str = ""
+    UPSTREAM_VLM_MODEL: str = "glimpse"
 
-    ELORIAN_BASE_URL: HttpUrl = Field(
-        default=HttpUrl("https://api.elorian.ai/v1"),
-        validation_alias=AliasChoices(
-            "FRIGATE_PROXY_VLM_BASE_URL",
-            "FRIGATE_PROXY_UPSTREAM_BASE_URL",
-            "FRIGATE_PROXY_ELORIAN_BASE_URL",
-            "UPSTREAM_VLM_BASE_URL",
-            "VLM_BASE_URL",
-            "OPENAI_BASE_URL",
-            "HELPERS_ELORIAN_BASE_URL",
-        ),
-    )
-    ELORIAN_API_KEY: str = Field(
-        default="",
-        validation_alias=AliasChoices(
-            "FRIGATE_PROXY_VLM_API_KEY",
-            "FRIGATE_PROXY_UPSTREAM_API_KEY",
-            "FRIGATE_PROXY_ELORIAN_API_KEY",
-            "UPSTREAM_VLM_API_KEY",
-            "VLM_API_KEY",
-            "OPENAI_API_KEY",
-            "HELPERS_ELORIAN_API_KEY",
-            "ELORIAN_API_KEY",
-        ),
-    )
-    ELORIAN_MODEL: str = Field(
-        default="glimpse",
-        validation_alias=AliasChoices(
-            "FRIGATE_PROXY_VLM_MODEL",
-            "FRIGATE_PROXY_UPSTREAM_MODEL",
-            "FRIGATE_PROXY_ELORIAN_MODEL",
-            "UPSTREAM_VLM_MODEL",
-            "VLM_MODEL",
-            "OPENAI_MODEL",
-            "HELPERS_ELORIAN_MODEL",
-        ),
-    )
+    UPSTREAM_THREAT_ENABLED: bool = False
+    UPSTREAM_THREAT_BASE_URL: HttpUrl = HttpUrl("https://api.typesafe.ai/v1")
+    UPSTREAM_THREAT_API_KEY: str = ""
+    UPSTREAM_THREAT_MODEL: str = "jev-latest"
 
-    ENABLE_TYPESAFE_THREAT_SCORING: bool = Field(
-        default=False,
-        validation_alias=AliasChoices(
-            "FRIGATE_PROXY_ENABLE_THREAT_SCORING",
-            "FRIGATE_PROXY_ENABLE_TYPESAFE_THREAT_SCORING",
-            "ENABLE_THREAT_SCORING",
-            "ENABLE_TYPESAFE_THREAT_SCORING",
-        ),
-    )
-    TYPESAFE_BASE_URL: HttpUrl = Field(
-        default=HttpUrl("https://api.typesafe.ai/v1"),
-        validation_alias=AliasChoices(
-            "FRIGATE_PROXY_THREAT_SCORING_BASE_URL",
-            "FRIGATE_PROXY_TYPESAFE_BASE_URL",
-            "THREAT_SCORING_BASE_URL",
-            "HELPERS_TYPESAFE_BASE_URL",
-        ),
-    )
-    TYPESAFE_API_KEY: str = Field(
-        default="",
-        validation_alias=AliasChoices(
-            "FRIGATE_PROXY_THREAT_SCORING_API_KEY",
-            "FRIGATE_PROXY_TYPESAFE_API_KEY",
-            "THREAT_SCORING_API_KEY",
-            "HELPERS_TYPESAFE_API_KEY",
-            "TYPESAFE_API_KEY",
-        ),
-    )
-    TYPESAFE_MODEL: str = Field(
-        default="jev-latest",
-        validation_alias=AliasChoices(
-            "FRIGATE_PROXY_THREAT_SCORING_MODEL",
-            "FRIGATE_PROXY_TYPESAFE_MODEL",
-            "THREAT_SCORING_MODEL",
-            "HELPERS_TYPESAFE_MODEL",
-        ),
-    )
-
-    SYSTEM_PROMPT_PREFIX: str = Field(
-        default="",
-        validation_alias=AliasChoices("FRIGATE_PROXY_SYSTEM_PROMPT_PREFIX", "SYSTEM_PROMPT_PREFIX"),
-    )
+    SYSTEM_PROMPT_PREFIX: str = ""
 
     @computed_field
     @property
@@ -117,13 +35,13 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def elorian_chat_url(self) -> HttpUrl:
-        return HttpUrl(f"{str(self.ELORIAN_BASE_URL).rstrip('/')}/chat/completions")
+    def upstream_vlm_chat_url(self) -> HttpUrl:
+        return HttpUrl(f"{str(self.UPSTREAM_VLM_BASE_URL).rstrip('/')}/chat/completions")
 
     @computed_field
     @property
-    def typesafe_systemone_url(self) -> HttpUrl:
-        return HttpUrl(f"{str(self.TYPESAFE_BASE_URL).rstrip('/')}/systemone")
+    def upstream_threat_url(self) -> HttpUrl:
+        return HttpUrl(f"{str(self.UPSTREAM_THREAT_BASE_URL).rstrip('/')}/systemone")
 
 
 settings = Settings()

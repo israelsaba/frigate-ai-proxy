@@ -106,7 +106,7 @@ class ReviewMetadata(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel, extra="ignore"):
-    model: str = settings.ELORIAN_MODEL
+    model: str = settings.UPSTREAM_VLM_MODEL
     messages: list[InboundMessage] = Field(min_length=1)
     max_completion_tokens: int = settings.MAX_OUTPUT_TOKENS
     reasoning_effort: ReasoningChoice | None = ReasoningChoice.LOW
@@ -185,7 +185,7 @@ class JevChoiceQuestion(BaseModel):
 
 
 class JevRequest(BaseModel):
-    model: str = settings.TYPESAFE_MODEL
+    model: str = settings.UPSTREAM_THREAT_MODEL
     state: PipelineState
     questions: dict[str, JevChoiceQuestion]
 

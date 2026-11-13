@@ -79,7 +79,7 @@ async def test_chat_completions_pipeline():
             ],
         }
 
-        with patch("app.api.ai.router.settings.ENABLE_TYPESAFE_THREAT_SCORING", False):
+        with patch("app.api.ai.router.settings.UPSTREAM_THREAT_ENABLED", False):
             res = await client.post("/v1/chat/completions", json=payload)
             assert res.status_code == 200
             data = res.json()
@@ -146,7 +146,7 @@ async def test_chat_completions_with_threat_scoring_via_frigate_model():
             ],
         }
 
-        with patch("app.api.ai.router.settings.ENABLE_TYPESAFE_THREAT_SCORING", False):
+        with patch("app.api.ai.router.settings.UPSTREAM_THREAT_ENABLED", False):
             res = await client.post("/v1/chat/completions", json=payload)
             assert res.status_code == 200
             data = res.json()
@@ -157,7 +157,7 @@ async def test_chat_completions_with_threat_scoring_via_frigate_model():
 
 @pytest.mark.asyncio
 async def test_models_endpoint_with_custom_model():
-    with patch("app.api.ai.router.settings.ELORIAN_MODEL", "gpt-4o-mini"):
+    with patch("app.api.ai.router.settings.UPSTREAM_VLM_MODEL", "gpt-4o-mini"):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/v1/models")
             assert response.status_code == 200
@@ -220,7 +220,7 @@ async def test_chat_completions_strips_threat_suffix_for_upstream():
             ],
         }
 
-        with patch("app.api.ai.router.settings.ENABLE_TYPESAFE_THREAT_SCORING", False):
+        with patch("app.api.ai.router.settings.UPSTREAM_THREAT_ENABLED", False):
             res = await client.post("/v1/chat/completions", json=payload)
             assert res.status_code == 200
             first_call_payload = mock_http_client.post.call_args_list[0].kwargs["json"]

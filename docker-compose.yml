@@ -8,15 +8,13 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - FRIGATE_PROXY_LOG_LEVEL=INFO
-      - FRIGATE_PROXY_MAX_OUTPUT_TOKENS=600
-      - FRIGATE_PROXY_MAX_SAMPLED_IMAGES=20
-      # Upstream Vision Model (any OpenAI-compatible VLM: OpenAI, Ollama, Elorian, etc.)
-      - FRIGATE_PROXY_VLM_BASE_URL=https://api.elorian.ai/v1
-      - FRIGATE_PROXY_VLM_MODEL=glimpse
-      - FRIGATE_PROXY_VLM_API_KEY=${VLM_API_KEY:-${ELORIAN_API_KEY:-}}
-      # Optional Threat Scoring (disabled by default; also activated via model suffix e.g. glimpse-threat)
-      - FRIGATE_PROXY_ENABLE_THREAT_SCORING=false
-      - FRIGATE_PROXY_THREAT_SCORING_BASE_URL=https://api.typesafe.ai/v1
-      - FRIGATE_PROXY_THREAT_SCORING_MODEL=jev-latest
-      - FRIGATE_PROXY_THREAT_SCORING_API_KEY=${THREAT_SCORING_API_KEY:-${TYPESAFE_API_KEY:-}}
+      - LOG_LEVEL=INFO
+      - MAX_OUTPUT_TOKENS=600
+      - MAX_SAMPLED_IMAGES=20
+      - UPSTREAM_VLM_BASE_URL=https://api.elorian.ai/v1
+      - UPSTREAM_VLM_MODEL=glimpse
+      - UPSTREAM_VLM_API_KEY=${UPSTREAM_VLM_API_KEY:-}
+      - UPSTREAM_THREAT_ENABLED=false
+      - UPSTREAM_THREAT_BASE_URL=https://api.typesafe.ai/v1
+      - UPSTREAM_THREAT_MODEL=jev-latest
+      - UPSTREAM_THREAT_API_KEY=${UPSTREAM_THREAT_API_KEY:-}
