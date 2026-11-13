@@ -5,9 +5,11 @@ from uuid import uuid4
 import pydantic_core
 from loguru import logger
 from pydantic import (
+    AliasChoices,
     BaseModel,
     Field,
     computed_field,
+    model_validator,
 )
 
 from app.core.config import settings
@@ -53,9 +55,26 @@ class ReasoningChoice(StrEnum):
 class ReviewMetadata(BaseModel):
     title: str = Field(min_length=1)
     scene: str = Field(min_length=1)
-    shortSummary: str = Field(min_length=1)
+    shortSummary: str = Field(
+        default="",
+        validation_alias=AliasChoices("shortSummary", "summary", "short_summary"),
+    )
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
-    potential_threat_level: int = Field(default=0, ge=0, le=2)
+    potential_threat_level: int = Field(
+        default=0,
+        ge=0,
+        le=2,
+        validation_alias=AliasChoices("potential_threat_level", "threat_level"),
+    )
+
+    @model_validator(mode="after")
+    def truncate_and_fallback_summary(self) -> Self:
+        self.title = self.title[:70]
+        if not self.shortSummary:
+            self.shortSummary = self.scene.split(".")[0].strip()[:280]
+        else:
+            self.shortSummary = self.shortSummary[:280]
+        return self
 
     @classmethod
     def from_llm_output(cls, content: str) -> Self:
@@ -64,27 +83,15 @@ class ReviewMetadata(BaseModel):
             clean = clean.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
         start = clean.find("{")
-        end = clean.rfind("}")
-        json_slice = clean[start : end + 1] if start != -1 and end != -1 else clean
-
-        try:
-            data = pydantic_core.from_json(json_slice, allow_partial="trailing-strings")
-            if isinstance(data, dict):
-                title = str(data.get("title", "")).strip()
-                scene = str(data.get("scene", "")).strip()
-                summary = str(data.get("shortSummary", data.get("summary", ""))).strip()
-                conf = float(data.get("confidence", 1.0))
-                threat = int(data.get("potential_threat_level", data.get("threat_level", 0)))
-                if title and scene:
-                    return cls(
-                        title=title[:70],
-                        scene=scene,
-                        shortSummary=(summary if summary else scene.split(".")[0].strip())[:280],
-                        confidence=conf,
-                        potential_threat_level=threat,
-                    )
-        except (ValueError, TypeError, KeyError):
-            pass
+        if start != -1:
+            end = clean.rfind("}")
+            json_slice = clean[start : end + 1] if end != -1 else clean[start:]
+            try:
+                data = pydantic_core.from_json(json_slice, allow_partial="trailing-strings")
+                if isinstance(data, dict):
+                    return cls.model_validate(data)
+            except (ValueError, TypeError, KeyError) as e:
+                logger.warning("JSON extraction failed, falling back to narrative", error=str(e))
 
         paragraphs = [p.replace("**", "").strip() for p in clean.split("\n\n") if p.strip()]
         first_para = paragraphs[0] if paragraphs else clean
