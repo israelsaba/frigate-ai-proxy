@@ -21,7 +21,7 @@ router = APIRouter(prefix="/v1", tags=["ai"])
 
 
 def get_http_client(request: Request) -> AsyncClient:
-    client = request.app.state.client  # type: ignore # pyright:ignore[reportAny]
+    client = request.app.state.client
     assert isinstance(client, AsyncClient)
     return client
 
@@ -42,10 +42,7 @@ async def chat_completions(
     request: ChatCompletionRequest,
     client: Annotated[AsyncClient, Depends(get_http_client)],
 ) -> ChatCompletionResponse:
-    # 1. Preserve prompt directly from Frigate config (and optional system prefix)
     prepared_request = ChatCompletionRequest.apply_frigate_prompt(request)
-
-    # 2. Sample image frames evenly to minimize latency and token costs
     sampled_request = ChatCompletionRequest.sample_images(prepared_request)
 
     logger.info(
@@ -54,7 +51,6 @@ async def chat_completions(
         prompt_len=len(sampled_request.inbound_prompt_text),
     )
 
-    # 3. Request visual observation from VLM (e.g., Elorian Glimpse)
     vlm_res = await base_post_request(
         client=client,
         url=settings.elorian_chat_url,
@@ -69,7 +65,6 @@ async def chat_completions(
         observation_preview=observation_content[:200] if observation_content else "",
     )
 
-    # 4. Assess threat level using TypeSafe System 1 / Jev if enabled and configured
     threat_level = 0
     confidence = 0.9
 
@@ -95,7 +90,6 @@ async def chat_completions(
                 error=str(e),
             )
 
-    # 5. Build structured review metadata with distinct title, scene, and shortSummary
     metadata = ReviewMetadata.hybrid_adapter(
         observations=observation_content,
         threat_level=threat_level,
