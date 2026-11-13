@@ -27,14 +27,19 @@ def get_http_client(request: Request) -> AsyncClient:
 
 @router.get("/models", response_model=ModelListResponse)
 async def list_models() -> ModelListResponse:
-    return ModelListResponse(
-        data=[
-            ModelItem(id=settings.ELORIAN_MODEL),
-            ModelItem(id=f"{settings.ELORIAN_MODEL}-threat"),
-            ModelItem(id="glimpse"),
-            ModelItem(id="glimpse-threat"),
-        ]
-    )
+    configured_model = settings.ELORIAN_MODEL
+    models = [
+        ModelItem(id=configured_model),
+        ModelItem(id=f"{configured_model}-threat"),
+    ]
+    if configured_model not in ("glimpse", "glimpse-threat"):
+        models.extend(
+            [
+                ModelItem(id="glimpse"),
+                ModelItem(id="glimpse-threat"),
+            ]
+        )
+    return ModelListResponse(data=models)
 
 
 @router.post("/chat/completions", response_model=ChatCompletionResponse)
@@ -45,9 +50,16 @@ async def chat_completions(
     prepared_request = ChatCompletionRequest.apply_frigate_prompt(request)
     sampled_request = ChatCompletionRequest.sample_images(prepared_request)
 
+    inbound_model = request.model
+    if inbound_model.endswith("-threat"):
+        stripped = inbound_model.removesuffix("-threat")
+        sampled_request.model = stripped if stripped else settings.ELORIAN_MODEL
+    elif inbound_model in ("threat", "jev"):
+        sampled_request.model = settings.ELORIAN_MODEL
+
     logger.debug(
         "Forwarding request to vision-language model",
-        model=settings.ELORIAN_MODEL,
+        model=sampled_request.model,
         prompt_len=len(sampled_request.inbound_prompt_text),
     )
 

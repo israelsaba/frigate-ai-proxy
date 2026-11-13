@@ -31,40 +31,78 @@ class Settings(BaseSettings):
 
     ELORIAN_BASE_URL: HttpUrl = Field(
         default=HttpUrl("https://api.elorian.ai/v1"),
-        validation_alias=AliasChoices("FRIGATE_PROXY_ELORIAN_BASE_URL", "HELPERS_ELORIAN_BASE_URL"),
+        validation_alias=AliasChoices(
+            "FRIGATE_PROXY_VLM_BASE_URL",
+            "FRIGATE_PROXY_UPSTREAM_BASE_URL",
+            "FRIGATE_PROXY_ELORIAN_BASE_URL",
+            "UPSTREAM_VLM_BASE_URL",
+            "VLM_BASE_URL",
+            "OPENAI_BASE_URL",
+            "HELPERS_ELORIAN_BASE_URL",
+        ),
     )
     ELORIAN_API_KEY: str = Field(
         default="",
         validation_alias=AliasChoices(
-            "FRIGATE_PROXY_ELORIAN_API_KEY", "HELPERS_ELORIAN_API_KEY", "ELORIAN_API_KEY"
+            "FRIGATE_PROXY_VLM_API_KEY",
+            "FRIGATE_PROXY_UPSTREAM_API_KEY",
+            "FRIGATE_PROXY_ELORIAN_API_KEY",
+            "UPSTREAM_VLM_API_KEY",
+            "VLM_API_KEY",
+            "OPENAI_API_KEY",
+            "HELPERS_ELORIAN_API_KEY",
+            "ELORIAN_API_KEY",
         ),
     )
     ELORIAN_MODEL: str = Field(
         default="glimpse",
-        validation_alias=AliasChoices("FRIGATE_PROXY_ELORIAN_MODEL", "HELPERS_ELORIAN_MODEL"),
+        validation_alias=AliasChoices(
+            "FRIGATE_PROXY_VLM_MODEL",
+            "FRIGATE_PROXY_UPSTREAM_MODEL",
+            "FRIGATE_PROXY_ELORIAN_MODEL",
+            "UPSTREAM_VLM_MODEL",
+            "VLM_MODEL",
+            "OPENAI_MODEL",
+            "HELPERS_ELORIAN_MODEL",
+        ),
     )
 
     ENABLE_TYPESAFE_THREAT_SCORING: bool = Field(
-        default=True,
+        default=False,
         validation_alias=AliasChoices(
-            "FRIGATE_PROXY_ENABLE_TYPESAFE_THREAT_SCORING", "ENABLE_TYPESAFE_THREAT_SCORING"
+            "FRIGATE_PROXY_ENABLE_THREAT_SCORING",
+            "FRIGATE_PROXY_ENABLE_TYPESAFE_THREAT_SCORING",
+            "ENABLE_THREAT_SCORING",
+            "ENABLE_TYPESAFE_THREAT_SCORING",
         ),
     )
     TYPESAFE_BASE_URL: HttpUrl = Field(
         default=HttpUrl("https://api.typesafe.ai/v1"),
         validation_alias=AliasChoices(
-            "FRIGATE_PROXY_TYPESAFE_BASE_URL", "HELPERS_TYPESAFE_BASE_URL"
+            "FRIGATE_PROXY_THREAT_SCORING_BASE_URL",
+            "FRIGATE_PROXY_TYPESAFE_BASE_URL",
+            "THREAT_SCORING_BASE_URL",
+            "HELPERS_TYPESAFE_BASE_URL",
         ),
     )
     TYPESAFE_API_KEY: str = Field(
         default="",
         validation_alias=AliasChoices(
-            "FRIGATE_PROXY_TYPESAFE_API_KEY", "HELPERS_TYPESAFE_API_KEY", "TYPESAFE_API_KEY"
+            "FRIGATE_PROXY_THREAT_SCORING_API_KEY",
+            "FRIGATE_PROXY_TYPESAFE_API_KEY",
+            "THREAT_SCORING_API_KEY",
+            "HELPERS_TYPESAFE_API_KEY",
+            "TYPESAFE_API_KEY",
         ),
     )
     TYPESAFE_MODEL: str = Field(
         default="jev-latest",
-        validation_alias=AliasChoices("FRIGATE_PROXY_TYPESAFE_MODEL", "HELPERS_TYPESAFE_MODEL"),
+        validation_alias=AliasChoices(
+            "FRIGATE_PROXY_THREAT_SCORING_MODEL",
+            "FRIGATE_PROXY_TYPESAFE_MODEL",
+            "THREAT_SCORING_MODEL",
+            "HELPERS_TYPESAFE_MODEL",
+        ),
     )
 
     SYSTEM_PROMPT_PREFIX: str = Field(
