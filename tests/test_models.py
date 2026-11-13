@@ -35,7 +35,6 @@ def test_frigate_prompt_retention():
         ],
     )
 
-    # Apply prompt preservation
     prepared = ChatCompletionRequest.apply_frigate_prompt(request)
     assert prepared.inbound_prompt_text == frigate_prompt
     assert "Active pixação or vandalism" in prepared.inbound_prompt_text
@@ -61,7 +60,6 @@ def test_image_sampling_preserves_prompt_and_limits_frames():
     sampled = ChatCompletionRequest.sample_images(request, max_images=10)
     msg_content = sampled.messages[0].content
     assert isinstance(msg_content, list)
-    # 1 text item + 10 sampled images
     assert len(msg_content) == 11
     assert isinstance(msg_content[0], TextContent)
     assert msg_content[0].text == prompt_text

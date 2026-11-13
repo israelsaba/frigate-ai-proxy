@@ -76,7 +76,6 @@ def extract_review_narrative(content: str) -> tuple[str, str, str]:
     """
     clean_content = content.strip()
 
-    # 1. Check if model returned structured JSON
     try:
         json_candidate = clean_content
         if "```json" in json_candidate:
@@ -103,10 +102,8 @@ def extract_review_narrative(content: str) -> tuple[str, str, str]:
             "Content not parsed as direct JSON, proceeding with narrative extraction", error=str(e)
         )
 
-    # 2. Extract from narrative sections (e.g. Elorian Glimpse, Qwen-VL, GPT-4V)
     scene = clean_content
 
-    # Look for activity-specific section headers
     activity_match = re.search(
         r"(?:\*\*|##)?\s*(?:Activity observed|Activities|Activity assessment|Persons and activity|Subjects and activities|Activity description)\s*(?:\*\*|##)?:?\s*(.*?)(?=\n\s*(?:\*\*|##)|$)",
         clean_content,
@@ -114,7 +111,6 @@ def extract_review_narrative(content: str) -> tuple[str, str, str]:
     )
     activity_text = activity_match.group(1).strip() if activity_match else ""
 
-    # Look for scene overview section headers
     overview_match = re.search(
         r"(?:\*\*|##)?\s*(?:Scene overview|Scene description|Scene and camera view)\s*(?:\*\*|##)?:?\s*(.*?)(?=\n\s*(?:\*\*|##)|$)",
         clean_content,
@@ -122,13 +118,11 @@ def extract_review_narrative(content: str) -> tuple[str, str, str]:
     )
     overview_text = overview_match.group(1).strip() if overview_match else ""
 
-    # Determine base text for shortSummary
     summary_source = (
         activity_text if activity_text else (overview_text if overview_text else clean_content)
     )
     cleaned_summary_source = clean_markdown_artifacts(summary_source)
 
-    # Remove generic filler prefixes
     cleaned_summary_source = re.sub(
         r"^(The footage shows|The camera shows|Overhead view of|The video displays|In this clip|Throughout the clip)\s*,?\s*",
         "",
@@ -143,13 +137,10 @@ def extract_review_narrative(content: str) -> tuple[str, str, str]:
         short_summary = clean_markdown_artifacts(clean_content)[:250]
     short_summary = short_summary[:280].strip()
 
-    # Determine concise title (<= 70 chars)
-    # Take the first phrase or clause from short_summary
     first_clause = re.split(r"[,;—–.-]", short_summary)[0].strip()
     if 10 <= len(first_clause) <= 70:
         title = first_clause
     else:
-        # Fallback to first few words
         words = short_summary.split()
         title = " ".join(words[:7])
         if len(title) > 65:

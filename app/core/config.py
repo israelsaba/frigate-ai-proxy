@@ -18,7 +18,6 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("FRIGATE_PROXY_LOG_LEVEL", "HELPERS_LOG_LEVEL", "LOG_LEVEL"),
     )
 
-    # Token and frame bounds for cost control
     MAX_OUTPUT_TOKENS: int = Field(
         default=600,
         validation_alias=AliasChoices(
@@ -30,7 +29,6 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("FRIGATE_PROXY_MAX_SAMPLED_IMAGES", "MAX_SAMPLED_IMAGES"),
     )
 
-    # Vision-Language Model provider (Elorian Glimpse or compatible)
     ELORIAN_BASE_URL: HttpUrl = Field(
         default=HttpUrl("https://api.elorian.ai/v1"),
         validation_alias=AliasChoices("FRIGATE_PROXY_ELORIAN_BASE_URL", "HELPERS_ELORIAN_BASE_URL"),
@@ -46,7 +44,6 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("FRIGATE_PROXY_ELORIAN_MODEL", "HELPERS_ELORIAN_MODEL"),
     )
 
-    # Threat Intelligence & Assessment (TypeSafe System 1 / Jev)
     ENABLE_TYPESAFE_THREAT_SCORING: bool = Field(
         default=True,
         validation_alias=AliasChoices(
@@ -70,7 +67,6 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("FRIGATE_PROXY_TYPESAFE_MODEL", "HELPERS_TYPESAFE_MODEL"),
     )
 
-    # Optional prefix or guidance to prepend to inbound prompt
     SYSTEM_PROMPT_PREFIX: str = Field(
         default="",
         validation_alias=AliasChoices("FRIGATE_PROXY_SYSTEM_PROMPT_PREFIX", "SYSTEM_PROMPT_PREFIX"),

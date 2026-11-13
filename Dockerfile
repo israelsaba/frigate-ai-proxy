@@ -1,6 +1,3 @@
-# ------------------------------------------------------------------------------
-# 1. BUILD STAGE: Install locked dependencies via uv
-# ------------------------------------------------------------------------------
 FROM python:3.12-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -16,9 +13,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv /app/.venv && \
     uv pip install --no-cache -r pyproject.toml
 
-# ------------------------------------------------------------------------------
-# 2. RUNTIME STAGE: Minimal production container
-# ------------------------------------------------------------------------------
 FROM python:3.12-slim
 
 WORKDIR /app
