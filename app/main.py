@@ -36,9 +36,3 @@ app.include_router(ai_router)
 async def health() -> bool:
     """Service health check endpoint."""
     return True
-
-
-def cli() -> None:
-    import uvicorn
-
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000)

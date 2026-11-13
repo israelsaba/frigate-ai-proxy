@@ -1,0 +1,30 @@
+{
+  "name": "frigate-ai-proxy",
+  "version": "0.2.0",
+  "description": "Interactive one-command installer and CLI for Frigate AI Proxy",
+  "type": "module",
+  "bin": {
+    "frigate-ai-proxy": "./bin/frigate-ai-proxy.js"
+  },
+  "files": [
+    "bin/"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "frigate",
+    "frigate-nvr",
+    "ai-proxy",
+    "generative-ai",
+    "cctv",
+    "glimpse",
+    "typesafe"
+  ],
+  "author": "Israel Saba",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/israelsaba/frigate-ai-proxy.git"
+  }
+}

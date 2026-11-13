@@ -77,12 +77,12 @@ It bridges the gap between raw video frames collected by Frigate and high-accura
 
 ## Quick Start
 
-### 1. One-Command Automated Install (Recommended)
+### 1. One-Command Automated Install via `npx` (Recommended)
 
 Run the interactive one-liner to configure and launch the container in seconds:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/israelsaba/frigate-ai-proxy/main/install.sh | bash
+npx frigate-ai-proxy
 ```
 
 **What it does:**
@@ -125,14 +125,8 @@ services:
       - frigate-ai-proxy
 ```
 
-### 3. Local Development or `uvx` / `pipx`
+### 3. Local Development (From Source)
 
-Run directly via `uvx` without Docker:
-```bash
-uvx frigate-ai-proxy
-```
-
-Or from source:
 ```bash
 git clone https://github.com/israelsaba/frigate-ai-proxy.git
 cd frigate-ai-proxy
